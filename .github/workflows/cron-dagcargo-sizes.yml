@@ -26,3 +26,7 @@ jobs:
           STAGING_PG_CONNECTION: ${{ secrets.STAGING_PG_CONNECTION }}
           PROD_PG_CONNECTION: ${{ secrets.PROD_PG_CONNECTION }}
         run: npm run start:dagcargo:sizes -w packages/cron
+
+      - name: Heartbeat
+        if: ${{ success() }}
+        run: ./packages/tools/scripts/cli.js heartbeat --token ${{ secrets.OPSGENIE_KEY }} --name cron-web3storage-dagcargo-sizes
