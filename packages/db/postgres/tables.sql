@@ -26,6 +26,12 @@ CREATE TYPE user_tag_value_type AS ENUM
   'text'
 );
 
+CREATE TYPE user_tag_proposal_decision_type AS ENUM
+(
+  'Approved',
+  'Declined'
+);
+
 -- A user of web3.storage.
 CREATE TABLE IF NOT EXISTS public.user
 (
@@ -44,7 +50,8 @@ CREATE TABLE IF NOT EXISTS public.user
 );
 CREATE INDEX IF NOT EXISTS user_updated_at_idx ON public.user (updated_at);
 
-
+-- These are active user_tags that a user has (no joins required).  Admins can add
+-- to this table at will, with or without there first being an entry in user_tag_proposal.
 CREATE TABLE IF NOT EXISTS public.user_tag
 (
   id              BIGSERIAL PRIMARY KEY,
@@ -52,13 +59,63 @@ CREATE TABLE IF NOT EXISTS public.user_tag
   tag             user_tag_type                                                 NOT NULL,
   value           TEXT                                                          NOT NULL,
   value_type      user_tag_value_type                                           NOT NULL,
-  reason          TEXT                                                          NOT NULL,
   inserted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())     NOT NULL,
   deleted_at  TIMESTAMP WITH TIME ZONE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS user_tag_is_deleted_idx ON user_tag (user_id, tag, deleted_at)
-WHERE deleted_at IS NOT NULL;
+-- Note: We index active user_tags with deleted_at IS NULL to enforce only 1 active
+-- tag type per user.  We allow there to be multiple deleted user_tags of the same type per
+-- user to handle the scenario where a user has had a tag removed multiple times by
+-- admins.
 CREATE UNIQUE INDEX IF NOT EXISTS user_tag_is_not_deleted_idx ON user_tag (user_id, tag)
+WHERE deleted_at IS NULL;
+
+-- These are where admin deletion reasons are stored.  These aren't needed by the application
+-- and are therefore stored separately from the active user_tags.
+CREATE TABLE IF NOT EXISTS public.user_tag_deletion_reasons
+(
+  id              BIGSERIAL PRIMARY KEY,
+  user_tag_id     BIGINT                                                        NOT NULL REFERENCES public.user_tag (id),
+  reason          TEXT                                                          NOT NULL,
+  inserted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())     NOT NULL
+);
+
+-- These are user_tags that a user has requested.  It is assumed that a user can only request
+-- one type of user_tag at any given time, hence the index associated with this table.
+-- This table should likely be joined with the user_tag_proposal_decision table to
+-- show the current decision of admins to approve or decline said requests.  These
+-- proposals are visible to both users and admins.
+CREATE TABLE IF NOT EXISTS public.user_tag_proposal
+(
+  id              BIGSERIAL PRIMARY KEY,
+  user_id         BIGINT                                                        NOT NULL REFERENCES public.user (id),
+  tag             user_tag_type                                                 NOT NULL,
+  value           TEXT                                                          NOT NULL,
+  value_type      user_tag_value_type                                           NOT NULL,
+  proposal        TEXT                                                          NOT NULL,
+  inserted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())     NOT NULL,
+  deleted_at  TIMESTAMP WITH TIME ZONE
+);
+-- Note: We index active user_tag_proposals with deleted_at IS NULL to enforce only 1 active
+-- tag type proposal per user.  We allow there to be multiple deleted user_tag_proposals of the same type per
+-- user to handle the scenario where a user has been denied multiple times by admins.
+-- If deleted_at is populated, it means the user_tag_proposal has been cancelled by
+-- a user or a decision in user_tag_proposal_decision has been provided by an admin.
+CREATE UNIQUE INDEX IF NOT EXISTS user_tag_proposal_is_not_deleted_idx ON user_tag_proposal (user_id, tag)
+WHERE deleted_at IS NULL;
+
+-- This table stores decisions made by admins to Approve or Decline a user_tag_proposal.
+CREATE TABLE IF NOT EXISTS public.user_tag_proposal_decision
+(
+  id                   BIGSERIAL PRIMARY KEY                                            ,
+  user_tag_proposal_id BIGINT                                                   NOT NULL REFERENCES public.user_tag_proposal (id),
+  decision             TEXT                                                             ,
+  decision_type        user_tag_proposal_decision_type                                  ,
+  inserted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())     NOT NULL,
+  deleted_at  TIMESTAMP WITH TIME ZONE
+);
+-- A deleted decision means that it is likely no longer needed in joins and is only
+-- preserved in the DB for historical purposes.
+CREATE UNIQUE INDEX IF NOT EXISTS user_tag_proposal_decision_is_not_deleted_idx ON user_tag_proposal_decision (user_id, tag)
 WHERE deleted_at IS NULL;
 
 -- User authentication keys.
