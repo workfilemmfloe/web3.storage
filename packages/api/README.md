@@ -4,10 +4,11 @@ The HTTP interface implemented as a Cloudflare Worker
 
 ## Getting started
 
-We use miniflare to run the api locally, and docker to run ipfs-cluster and postgres with postREST.
+We use Miniflare to run the api locally, and docker to run ipfs-cluster and postgres with postREST.
 
-In order to have the API fully functioning you need your DB to be set up.
-Please follow the setup instructions in the DB package [Readme](../db/README.md)
+The API backend uses the [Database package](../db/) to communicate and spin up the DB layer. 
+In order to have the API backend package working you need to make sure the db underlying DB is set up.
+Please follow the setup instructions in the DB package [Readme](../db/README.md) first.
 
 ```sh
 # Copy <.env.local.tpl> to `.env.local` and fill out the missing worker vars.
