@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.9.2](https://github.com/web3-storage/web3.storage/compare/website-v1.9.1...website-v1.9.2) (2022-02-21)
+
+
+### Bug Fixes
+
+* remove resize observer, use css for responsive menu ([#778](https://github.com/web3-storage/web3.storage/issues/778)) ([afc0292](https://github.com/web3-storage/web3.storage/commit/afc02922a4332602a7a1294bcc2cf82a206a63ec))
+
 ### [1.9.1](https://www.github.com/web3-storage/web3.storage/compare/website-v1.9.0...website-v1.9.1) (2022-01-11)
 
 
